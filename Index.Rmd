@@ -1,0 +1,142 @@
+---
+title: "Tax Havens and Secret Finance"
+author: "Kiersten Hileman"
+date: "04-07-23"
+output:
+  xaringan::moon_reader:
+    css: [default, duke-blue, fc-fonts]
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+```{r, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+
+library(haven)
+library(knitr)
+library(tidyverse)
+library(scales)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+
+df = read.csv('CTHI_2021_Main_Results.csv')
+df1 = read.csv('fsi_2022_main_results.csv') 
+colnames(df1)[2] = 'ISO.2'
+colnames(df1)[13] = 'FSI Rank'
+df2 <- full_join(df, df1,
+          by = join_by("ISO.2"))
+na.omit(df2)
+df3 <- df2 %>% distinct()
+colnames(df3)[21] = 'FSI Score'
+```
+
+
+
+
+
+## Data Sources  
+### Tax Justice Network (TJN)
+###Illicit Financial Flows Vulnerabilty Tracker
+* TJN collects data from the World Bank and IMF on 207 countries but filters out a large amount of these based on global economic weight 
+* Two main measures used here: Tax Haven Score and Financial Secrecy Ranking
+* Tax Haven Scores is calculated using 4 different categories of law that indicate ability to evade taxes:   
+    * Lowest available corporate income tax  
+    * Loopholes and gaps, 
+    * Transparency
+    * Anti-avoidance  
+    * Double tax treaty aggressiveness. 
+    * 0 meaning does not allow for corporate tax abuse and 100 correlates with unrestricted corporate tax abuse. 
+* Financial Secrecy Ranking is calculated across 151 jurisdictions based on 20 indicators of financial secrecy that revolve around governments' anti-money laundering laws and tax haven status
+    * Weighted against Global Scale Weight based on economy size where 100 is perfectly unrestrained secrecy and 0 meaning no financial secrecy is allowed. 
+
+
+---
+class: inverse, center, middle
+## Taxen Haven Rankings
+```{r, echo=FALSE, warnings = FALSE, }
+p <- ggplot(data = df, aes(x = Rank, y = Haven.Score, label = ISO.2)) +
+  geom_point(color = case_when(
+             df$Rank >= 65 ~ 'dodgerblue',
+             df$Rank <= 5 ~ 'forestgreen',
+             TRUE ~ 'slateblue1'), 
+               size = 3, alpha = 0.8) +
+  geom_text_repel(data          = subset(df, Rank >= 65),
+                  nudge_y       = 32 - subset(df, Rank >= 65)$Rank,
+                  size          = 4,
+                  box.padding   = 1.5,
+                  point.padding = 0.5,
+                  force         = 100,
+                  segment.size  = 0.2,
+                  segment.color = "grey50",
+                  direction     = "x") +
+  geom_text_repel(data          = subset(df, Rank <= 5),
+                  nudge_y       = 32 - subset(df, Rank <= 5)$Rank,
+                  size          = 4,
+                  box.padding   = 1.5,
+                  point.padding = 0.5,
+                  force         = 100,
+                  segment.size  = 0.2,
+                  segment.color = "grey50",
+                  direction     = "x")
+p <- p + labs(title =  "Country Tax Haven Rankings", x = "Country Rank", y = "Tax Haven Score")
+p <- p + theme(plot.title  = element_text(hjust = 0.5, vjust = .1),
+               text=element_text(size=16,  family="serif"), 
+               panel.grid.major.y = element_line(color = 'salmon'),
+               panel.grid.major.x = element_blank(),
+               axis.ticks.x.bottom = element_blank(),
+               axis.ticks.y = element_blank(),
+               axis.text.x = element_blank(),
+               panel.background = element_rect(fill='transparent'))
+plot(p)
+
+```
+
+---
+class: center, middle
+### Secrecy Index
+```{r, echo=FALSE, warnings = FALSE, out.width= "60%", out.height= "40%"}
+g <- ggplot(data = df3, aes(x = `FSI Rank`, y = `FSI Score`, label = ISO.2)) +
+  geom_point(color = case_when(
+    df3$`FSI Rank` >= 135 ~ 'dodgerblue',
+    df3$`FSI Rank` <= 5 ~ 'forestgreen',
+    TRUE ~ 'slateblue1'), 
+    size = 1, alpha = 0.8) +
+  geom_text_repel(data          = subset(df3, `FSI Rank` >= 137),
+                  nudge_y =     500 - subset(df3, `FSI Rank` >= 137)$`FSI Rank`,
+                  size          = 4,
+                  box.padding   = 1.5,
+                  point.padding = 0.5,
+                  force         = 50,
+                  segment.size  = 0.2,
+                  segment.color = "dodgerblue",
+                  direction     = "x") +
+  geom_text_repel(data          = subset(df3, `FSI Rank` <= 5),
+                  nudge_y       = 500 - subset(df3, `FSI Rank` <=5)$`FSI Rank`,
+                  size          = 4,
+                  box.padding   = 1.5,
+                  point.padding = 0.5,
+                  force         = 100,
+                  segment.size  = 0.2,
+                  segment.color = "forestgreen",
+                  direction     = "x") +
+  scale_x_continuous(
+    limits = c(0, 150, 50),
+    breaks = c(30, 60 , 90, 120, 150))
+options(ggrepel.max.overlaps = 15)  
+    
+g <- g + labs(title =  "Country Secrecy Ranking", y = "Secrecy Score", x = "Country")
+g <- g + theme(plot.title  = element_text(hjust = 0.5, vjust = .1),
+            axis.title.x = element_blank(),
+            panel.grid.major.x = element_line(color = 'mistyrose'),
+            panel.background = element_rect(fill='transparent'),
+            text=element_text(size=16,  family="serif"))
+plot(g)
+```
+* Top 5 countries with highest secrecy rating are: United States, Switzerland, Singapore, Hong Kong and Luxembourg.  
+* Bottom 5 countries are Montserrat, Slovenia, Gambia, Argentina and San Marino
